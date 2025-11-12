@@ -102,7 +102,7 @@ export const DashboardPage = () => {
             {/* Logout Button */}
             <motion.button
               onClick={handleLogout}
-              className="absolute  top-[-20px] right-[-50px] -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"
+              className="absolute  top-[10px] right-[-50px] -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"
             >
               <svg
                 className="w-5 h-5 text-white"
