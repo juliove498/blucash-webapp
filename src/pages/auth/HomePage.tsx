@@ -1,10 +1,20 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 export const HomePage = () => {
   const { t } = useTranslation();
-  const { login } = usePrivy();
+  const { login, authenticated, ready } = usePrivy();
+  const navigate = useNavigate();
+
+  // Redirigir al dashboard si ya está autenticado
+  useEffect(() => {
+    if (ready && authenticated) {
+      navigate('/app', { replace: true });
+    }
+  }, [authenticated, ready, navigate]);
 
   return (
     <div className="min-h-screen bg-primary flex flex-col px-8 pt-safe pb-safe">
