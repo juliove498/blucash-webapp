@@ -1,9 +1,13 @@
-import type { PrivyUser } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import { formatUnits } from 'viem';
 
-export const getUserName = (user: PrivyUser | null) =>
-	(user?.linked_accounts?.[0].type === 'email' && user?.linked_accounts?.[0]?.address) ||
-	(user?.linked_accounts?.[0].type === 'phone' && user?.linked_accounts?.[0]?.phoneNumber) ||
+// Inferir el tipo de user desde usePrivy
+type PrivyHook = ReturnType<typeof usePrivy>;
+type User = PrivyHook['user'];
+
+export const getUserName = (user: User) =>
+	(user?.linkedAccounts?.[0].type === 'email' && user?.linkedAccounts?.[0]?.address) ||
+	(user?.linkedAccounts?.[0].type === 'phone' && user?.linkedAccounts?.[0]?.number) ||
 	'User';
 
 type BalanceFormatParams = {
