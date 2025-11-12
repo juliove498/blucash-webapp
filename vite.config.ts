@@ -47,6 +47,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.railway\.app\/.*/i,
@@ -82,9 +83,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-privy': ['@privy-io/react-auth'],
-          'vendor-blockchain': ['viem', 'permissionless'],
-          'vendor-ui': ['framer-motion', '@radix-ui/react-dialog']
+          // Solo separar Privy que es muy grande
+          'vendor-privy': ['@privy-io/react-auth', '@privy-io/react-auth/smart-wallets'],
         }
       }
     }
