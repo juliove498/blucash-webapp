@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export const BottomNavigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -12,7 +13,7 @@ export const BottomNavigation = () => {
         {/* Home Button */}
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => (window.location.href = "/app")}
+          onClick={() => navigate("/app")}
           className="flex items-center justify-center w-16 h-16 rounded-2xl transition-colors bg-[#E8EBF8]"
         >
           <svg
@@ -27,7 +28,7 @@ export const BottomNavigation = () => {
         {/* Floating Action Button - Enviar */}
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => (window.location.href = "/send")}
+          onClick={() => navigate("/app/send")}
           className="w-[72px] h-[72px] rounded-full bg-[#354eab] shadow-[0_8px_24px_rgba(53,78,171,0.35)] flex items-center justify-center -mt-2"
         >
           <svg
@@ -48,7 +49,7 @@ export const BottomNavigation = () => {
         {/* Profile/User Button */}
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => (window.location.href = "/app/profile")}
+          onClick={() => navigate("/app/profile")}
           className="flex items-center justify-center w-16 h-16 rounded-2xl transition-colors"
         >
           <svg

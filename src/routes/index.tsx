@@ -34,7 +34,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!authenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
 
   return <>{children}</>;
@@ -56,15 +56,23 @@ export const AppRoutes = () => {
   return (
     <Routes>
       {/* Auth Routes */}
-      <Route path="/" element={<AuthLayout />}>
-        {authenticated ? (
-          <Route index element={<Navigate to="/app" replace />} />
-        ) : (
-          <Route index element={<HomePage />} />
-        )}
+      <Route path="/auth/login" element={<AuthLayout />}>
+        <Route index element={<HomePage />} />
       </Route>
 
-      {/* App Routes */}
+      {/* Root redirect based on auth status */}
+      <Route
+        path="/"
+        element={
+          authenticated ? (
+            <Navigate to="/app" replace />
+          ) : (
+            <Navigate to="/auth/login" replace />
+          )
+        }
+      />
+
+      {/* App Routes - Dashboard */}
       <Route
         path="/app"
         element={
@@ -75,34 +83,10 @@ export const AppRoutes = () => {
       >
         <Route index element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="send" element={<SendPage />} />
+        <Route path="deposit" element={<DepositPage />} />
+        <Route path="swap" element={<SwapPage />} />
       </Route>
-
-      <Route
-        path="/send"
-        element={
-          <ProtectedRoute>
-            <SendPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/deposit"
-        element={
-          <ProtectedRoute>
-            <DepositPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/swap"
-        element={
-          <ProtectedRoute>
-            <SwapPage />
-          </ProtectedRoute>
-        }
-      />
 
       {/* Onboarding Routes */}
       <Route

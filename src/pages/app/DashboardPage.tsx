@@ -149,7 +149,7 @@ export const DashboardPage = () => {
           <div className="flex gap-4 justify-center px-2">
             <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => (window.location.href = "/send")}
+              onClick={() => navigate("/app/send")}
               className="flex-1 max-w-[240px] bg-white/95 rounded-full px-3 py-3 shadow-lg flex items-center gap-4"
             >
               <div className="w-[54px] h-[54px] rounded-full bg-[#4A6FC8] flex items-center justify-center shrink-0">
@@ -174,7 +174,7 @@ export const DashboardPage = () => {
 
             <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => (window.location.href = "/deposit")}
+              onClick={() => navigate("/app/deposit")}
               className="flex-1 max-w-[240px] bg-white/95 rounded-full px-3 py-3 shadow-lg flex items-center gap-4"
             >
               <div className="w-[54px] h-[54px] rounded-full bg-[#3B99FC] flex items-center justify-center shrink-0">

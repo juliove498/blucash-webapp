@@ -1,7 +1,11 @@
 import { type Chain, createPublicClient, http } from 'viem';
 
 const RPC_ENDPOINTS = {
-	base: ['https://base.llamarpc.com', 'https://mainnet.base.org'],
+	base: [
+		'https://mainnet.base.org',
+		'https://base-mainnet.public.blastapi.io',
+		'https://base.llamarpc.com',
+	],
 	baseSepolia: ['https://sepolia.base.org'],
 };
 
