@@ -38,8 +38,8 @@ export const CSP_CONFIG = {
   // Acciones de formularios
   'form-action': ["'self'"],
   
-  // Prevenir clickjacking
-  'frame-ancestors': ["'none'"],
+  // NO incluir frame-ancestors - Privy lo maneja en sus propios headers
+  // frame-ancestors controla quién puede embeber TU sitio, no qué iframes TÚ cargas
   
   // IFrames hijos (Privy modal, WalletConnect)
   'child-src': [
