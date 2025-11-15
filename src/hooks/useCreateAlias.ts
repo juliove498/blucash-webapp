@@ -33,8 +33,8 @@ export function useCreateAlias() {
 			}
 
 			console.log('[useCreateAlias] Navigating to /app');
-			navigate('/app', { replace: true });
 			queryClient.cancelQueries({ queryKey: ['user-alias'] });
+			window.location.href = '/app';
 		},
 		onError: (error) => {
 			console.error('[useCreateAlias] Error creating alias:', error);
