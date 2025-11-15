@@ -67,7 +67,15 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true,
-    host: true
+    host: true,
+    proxy: {
+      '/api/redeem': {
+        target: 'https://airdrop-devconnect.blucash.xyz',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path
+      }
+    }
   },
   preview: {
     port: 5174,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePrivy } from "@privy-io/react-auth";
@@ -9,11 +9,13 @@ import HideBalance from "@/components/HideBalance";
 import Mask from "@/components/Mask";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { LinkAccount } from "@/components/LinkAccount";
+import { BottomSheet, type BottomSheetRef } from "@/components/ui/BottomSheet";
 import { queryClient } from "@/config/queryClient";
 import { AVAILABLE_TOKENS } from "@/constants/tokens";
 import { useCompactUI } from "@/hooks/useCompactUI";
 import { useGetAlias } from "@/hooks/useGetAlias";
 import useGetBalance from "@/hooks/useGetBalance";
+import { useRedeemArst } from "@/hooks/useRedeemArst";
 import { useAliasStore } from "@/stores/useAliasStore";
 import { useSmartWalletKeyStore } from "@/stores/useSmartWalletKey";
 import useTokenBalanceStore from "@/stores/useTokenBalanceStore";
@@ -31,6 +33,33 @@ export const ProfilePage = () => {
   const [isLoadingTerms, setIsLoadingTerms] = useState(false);
   const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false);
   const { data: aliasData } = useGetAlias(smartAccount?.address as Address);
+  const redeemMutation = useRedeemArst();
+  const redeemBottomSheetRef = useRef<BottomSheetRef>(null);
+  const [redeemStatus, setRedeemStatus] = useState<"success" | "error" | null>(
+    null
+  );
+
+  const handleRedeemArst = async () => {
+    if (!smartAccount?.address || !alias) return;
+
+    try {
+      const result = await redeemMutation.mutateAsync({
+        alias,
+        wallet_address: smartAccount.address,
+        email: user?.email?.address,
+        phone_number: user?.phone?.number,
+      });
+
+      if (result.success) {
+        setRedeemStatus("success");
+        redeemBottomSheetRef.current?.present();
+      }
+    } catch (error) {
+      setRedeemStatus("error");
+      redeemBottomSheetRef.current?.present();
+      console.error("Error al enviar solicitud de redención:", error);
+    }
+  };
 
   const handleCopyAddress = async () => {
     if (smartAccount?.address) {
@@ -357,6 +386,46 @@ export const ProfilePage = () => {
         {/* Link Accounts */}
         <LinkAccount />
 
+        {/* DevConnect ARG Banner */}
+        <div className="mb-6 bg-gradient-to-br from-[#E8EBF4] to-[#D8DBE8] rounded-3xl p-6 relative overflow-hidden">
+          <div className="relative z-10">
+            <h3 className="text-[#12033A] text-xl font-bold mb-2">
+              ¿Estás en Devconnect ARG?
+            </h3>
+            <p className="text-[#12033A] text-base mb-4 leading-relaxed">
+              Reclamá tus ARST y arrimate a nuestro stand que te invitamos un
+              café y nos conocemos
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handleRedeemArst}
+              disabled={redeemMutation.isPending}
+              className="bg-[#0F2854] text-white rounded-full px-6 py-3 font-semibold flex items-center gap-3 shadow-lg hover:bg-[#1a3d72] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
+                </svg>
+              </div>
+              <span>
+                {redeemMutation.isPending ? "Enviando..." : "Quiero mis ARST"}
+              </span>
+            </motion.button>
+          </div>
+          {/* Decorative icon */}
+          <div className="absolute -right-4 -top-4 w-32 h-32 opacity-10">
+            <img
+              src="/assets/images/arst.webp"
+              alt=""
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+
         {/* Settings */}
         <div className="space-y-2.5">
           <motion.button
@@ -558,6 +627,77 @@ export const ProfilePage = () => {
           </motion.button>
         </div>
       </div>
+
+      {/* Redeem Result BottomSheet */}
+      <BottomSheet ref={redeemBottomSheetRef}>
+        <div className="py-6">
+          {redeemStatus === "success" ? (
+            // Success Message
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <svg
+                  className="w-10 h-10 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#12033A] mb-3">
+                ¡Excelente!
+              </h3>
+              <p className="text-gray-600 text-base leading-relaxed mb-6">
+                Acercate al stand y mostrá tu alias para recibir tus ARST
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => redeemBottomSheetRef.current?.dismiss()}
+                className="w-full bg-[#2952E8] text-white rounded-2xl py-4 font-semibold"
+              >
+                Entendido
+              </motion.button>
+            </div>
+          ) : (
+            // Error Message
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <svg
+                  className="w-10 h-10 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#12033A] mb-3">
+                Oops, algo salió mal
+              </h3>
+              <p className="text-gray-600 text-base leading-relaxed mb-6">
+                Recordá que solo podes reclamar una vez tus ARST en Devconnect.
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => redeemBottomSheetRef.current?.dismiss()}
+                className="w-full bg-[#2952E8] text-white rounded-2xl py-4 font-semibold"
+              >
+                Entendido
+              </motion.button>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 };

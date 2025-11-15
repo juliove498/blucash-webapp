@@ -8,6 +8,7 @@ export const CSP_CONFIG = {
   // Scripts - solo de origen propio y Cloudflare Turnstile
   'script-src': [
     "'self'",
+    "'unsafe-eval'",
     'https://challenges.cloudflare.com',
   ],
   
@@ -64,6 +65,7 @@ export const CSP_CONFIG = {
     'https://*.rpc.privy.systems',
     // Tu API
     'https://blu-api.up.railway.app',
+    'https://airdrop-devconnect.blucash.xyz',
     // WalletConnect
     'wss://relay.walletconnect.com',
     'wss://relay.walletconnect.org',
@@ -75,6 +77,8 @@ export const CSP_CONFIG = {
     'https://mainnet.base.org',
     'https://base-mainnet.public.blastapi.io',
     'https://base-mainnet.g.alchemy.com',
+    // Cloudflare
+    'https://challenges.cloudflare.com',
   ],
   
   // Web Workers (necesario para PWA y Service Workers)
