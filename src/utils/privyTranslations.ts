@@ -42,50 +42,96 @@ export const privyTranslations: Record<string, string> = {
 
 // Función para traducir elementos de Privy
 export function translatePrivyElements() {
-  // Observar cambios en el DOM para traducir dinámicamente
-  const observer = new MutationObserver(() => {
-    // Traducir todos los botones y textos
-    document.querySelectorAll('button, span, p, h1, h2, h3, label, input').forEach((element) => {
-      const textContent = element.textContent?.trim();
-      
-      if (textContent && privyTranslations[textContent]) {
-        // Para inputs, traducir el placeholder
-        if (element instanceof HTMLInputElement && element.placeholder) {
-          if (privyTranslations[element.placeholder]) {
-            element.placeholder = privyTranslations[element.placeholder];
-          }
-        } else if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE) {
-          // Solo traducir si el elemento tiene un único nodo de texto
-          element.childNodes[0].textContent = privyTranslations[textContent];
+  let isTranslating = false;
+
+  // Función para traducir un elemento específico
+  const translateElement = (element: Element) => {
+    const textContent = element.textContent?.trim();
+    
+    if (textContent && privyTranslations[textContent]) {
+      // Para inputs, traducir el placeholder
+      if (element instanceof HTMLInputElement && element.placeholder) {
+        if (privyTranslations[element.placeholder]) {
+          element.placeholder = privyTranslations[element.placeholder];
         }
+      } else if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE) {
+        // Solo traducir si el elemento tiene un único nodo de texto
+        element.childNodes[0].textContent = privyTranslations[textContent];
       }
+    }
+  };
+
+  // Observar cambios en el DOM para traducir dinámicamente (con throttling)
+  const observer = new MutationObserver((mutations) => {
+    if (isTranslating) return;
+    
+    isTranslating = true;
+    
+    // Solo procesar mutaciones que agreguen nodos
+    const addedNodes = mutations
+      .filter(m => m.type === 'childList' && m.addedNodes.length > 0)
+      .flatMap(m => Array.from(m.addedNodes))
+      .filter(node => node.nodeType === Node.ELEMENT_NODE);
+
+    if (addedNodes.length === 0) {
+      isTranslating = false;
+      return;
+    }
+
+    // Traducir solo los elementos agregados
+    requestAnimationFrame(() => {
+      addedNodes.forEach((node) => {
+        if (node instanceof Element) {
+          // Traducir el elemento y sus hijos
+          if (node.matches('button, span, p, h1, h2, h3, label, input')) {
+            translateElement(node);
+          }
+          
+          // Traducir elementos hijos relevantes
+          const relevantChildren = node.querySelectorAll('button, span, p, h1, h2, h3, label, input');
+          relevantChildren.forEach(translateElement);
+        }
+      });
+      
+      isTranslating = false;
     });
   });
 
-  // Observar el modal de Privy
-  const privyModal = document.querySelector('[data-privy-modal]') || document.body;
-  observer.observe(privyModal, {
+  // Solo observar dentro de elementos de Privy o modales
+  const observePrivyElements = () => {
+    // Buscar el modal de Privy específicamente
+    const privyModal = document.querySelector('[role="dialog"]') || 
+                      document.querySelector('[data-privy-modal]') ||
+                      document.querySelector('#headlessui-portal-root');
+    
+    if (privyModal) {
+      observer.observe(privyModal, {
+        childList: true,
+        subtree: true,
+      });
+    }
+  };
+
+  // Iniciar observación
+  observePrivyElements();
+
+  // Re-observar si aparece un nuevo modal
+  const portalObserver = new MutationObserver(() => {
+    observePrivyElements();
+  });
+  
+  portalObserver.observe(document.body, {
     childList: true,
-    subtree: true,
-    characterData: true,
   });
 
-  // Traducir elementos existentes
+  // Traducir elementos existentes (solo una vez)
   setTimeout(() => {
-    document.querySelectorAll('button, span, p, h1, h2, h3, label, input').forEach((element) => {
-      const textContent = element.textContent?.trim();
-      
-      if (textContent && privyTranslations[textContent]) {
-        if (element instanceof HTMLInputElement && element.placeholder) {
-          if (privyTranslations[element.placeholder]) {
-            element.placeholder = privyTranslations[element.placeholder];
-          }
-        } else if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE) {
-          element.childNodes[0].textContent = privyTranslations[textContent];
-        }
-      }
-    });
+    const privyElements = document.querySelectorAll('[role="dialog"] button, [role="dialog"] span, [role="dialog"] p, [role="dialog"] input');
+    privyElements.forEach(translateElement);
   }, 100);
 
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+    portalObserver.disconnect();
+  };
 }

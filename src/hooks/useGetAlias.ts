@@ -41,8 +41,8 @@ export function useGetAlias(address?: string) {
 		},
 		enabled: !!address,
 		retry: false,
-		staleTime: 0, // Siempre considerar los datos como stale para refetch
-		refetchOnMount: true, // Refetch cuando el componente se monta
+		staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+		refetchOnMount: false,
 	});
 
 	console.log('[useGetAlias] Query state:', {
