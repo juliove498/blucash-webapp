@@ -22,7 +22,7 @@ export const CreateAliasPage = () => {
   // Redirigir a home si ya tiene alias
   useEffect(() => {
     if (existingAlias) {
-      navigate("/app", { replace: true });
+      window.location.href = "/app";
     }
   }, [existingAlias, navigate]);
 

@@ -62,7 +62,7 @@ export function useGetAlias(address?: string) {
 		
 		if (query.isSuccess && query.data === null) {
 			console.log('[useGetAlias] Redirecting to onboarding...');
-			navigate('/onboarding/welcome', { replace: true });
+			window.location.href = '/onboarding/welcome';
 		}
 	}, [query.isSuccess, query.data, navigate]);
 

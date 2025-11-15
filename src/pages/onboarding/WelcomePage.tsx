@@ -10,7 +10,7 @@ export const WelcomePage = () => {
   // Redirigir a home si ya tiene alias
   useEffect(() => {
     if (alias) {
-      navigate("/app", { replace: true });
+      window.location.href = "/app";
     }
   }, [alias, navigate]);
 
