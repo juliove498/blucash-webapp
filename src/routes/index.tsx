@@ -83,10 +83,35 @@ export const AppRoutes = () => {
       >
         <Route index element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="send" element={<SendPage />} />
-        <Route path="deposit" element={<DepositPage />} />
-        <Route path="swap" element={<SwapPage />} />
       </Route>
+
+      {/* Full-screen pages without layout */}
+      <Route
+        path="/app/send"
+        element={
+          <ProtectedRoute>
+            <SendPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/deposit"
+        element={
+          <ProtectedRoute>
+            <DepositPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/swap"
+        element={
+          <ProtectedRoute>
+            <SwapPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Onboarding Routes */}
       <Route

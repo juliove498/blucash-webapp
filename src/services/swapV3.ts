@@ -53,6 +53,7 @@ export const swapV3 = async ({
 	const amountInWei = parseUnits(amountIn, TOKENS.USDC.decimals);
 
 	console.log('Aprobando router para gastar tokens...');
+	
 	const approveHash = await walletClient.sendTransaction({
 		to: TOKENS.USDC.address,
 		data: encodeFunctionData({

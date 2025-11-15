@@ -62,11 +62,23 @@ export function useSwapV3<
 							? 'ARST'
 							: 'UNKNOWN';
 
+				// Determinar decimales correctos
+				const tokenInDecimals = variables.tokenIn.toLowerCase() === TOKENS.USDC.address?.toLowerCase()
+					? TOKENS.USDC.decimals
+					: TOKENS.ARST.decimals;
+				const tokenOutDecimals = variables.tokenOut.toLowerCase() === TOKENS.USDC.address?.toLowerCase()
+					? TOKENS.USDC.decimals
+					: TOKENS.ARST.decimals;
+
 				// Calcular amountOut (usar el del quote si está disponible, sino usar amountOutMinimum)
-				const amountOutWei = variables.amountOut
-					? parseUnits(variables.amountOut, TOKENS.ARST.decimals)
-					: variables.amountOutMinimum;
-				const amountInWei = parseUnits(variables.amountIn, TOKENS.USDC.decimals);
+				// Si viene formateado (con coma), convertirlo a formato numérico
+				let amountOutWei = variables.amountOutMinimum;
+				if (variables.amountOut) {
+					const cleanAmountOut = variables.amountOut.replace(/\./g, '').replace(',', '.');
+					amountOutWei = parseUnits(cleanAmountOut, tokenOutDecimals);
+				}
+				
+				const amountInWei = parseUnits(variables.amountIn, tokenInDecimals);
 
 				// Crear transacción optimista
 				const optimisticTransaction = {
@@ -77,8 +89,8 @@ export function useSwapV3<
 					tokenOut: tokenOutSymbol,
 					amountIn: amountInWei.toString(),
 					amountOut: amountOutWei.toString(),
-					tokenInDecimals: TOKENS.USDC.decimals.toString(),
-					tokenOutDecimals: TOKENS.ARST.decimals.toString(),
+					tokenInDecimals: tokenInDecimals.toString(),
+					tokenOutDecimals: tokenOutDecimals.toString(),
 					timeStamp: Math.floor(swapData.timestamp).toString(),
 					from: variables.recipient.toLowerCase(),
 					to: variables.recipient.toLowerCase(),
@@ -93,35 +105,30 @@ export function useSwapV3<
 				// Limitar a 10 resultados
 				const limitedData = newData.slice(0, 10);
 
-			queryClient.setQueryData(['last-transactions'], limitedData);
-		}
+				queryClient.setQueryData(['last-transactions'], limitedData);
+			}
 
-		// TODO: Fix callback types
-		// if (options?.onSuccess) {
-		// 	options.onSuccess(data as TData, variables, context);
-		// }
+			options?.onSuccess?.(data as TData, variables, context as TContext);
 
-		// Invalidar queries de balance después del swap
-		queryClient.invalidateQueries({
-			queryKey: ['balance'],
-		});
+			// Invalidar queries de balance después del swap
+			queryClient.invalidateQueries({
+				queryKey: ['balance'],
+			});
 
-		queryClient.invalidateQueries({
-			queryKey: ['balance', variables.tokenIn],
-		});
+			queryClient.invalidateQueries({
+				queryKey: ['balance', variables.tokenIn],
+			});
 
-		queryClient.invalidateQueries({
-			queryKey: ['balance', variables.tokenOut],
-		});
-	},
-	onError: (error, variables, context) => {
-		// TODO: Fix callback types
-		// if (options?.onError) {
-		// 	options.onError(error as TError, variables, context);
-		// }
-	},
+			queryClient.invalidateQueries({
+				queryKey: ['balance', variables.tokenOut],
+			});
+		},
+		onError: (error, variables, context) => {
+			options?.onError?.(error as TError, variables, context as TContext | undefined);
+		},
 		mutationFn: async (params: SwapV3Params) => {
 			return await swapV3(params);
 		},
 	});
 }
+

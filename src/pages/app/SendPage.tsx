@@ -121,7 +121,7 @@ export const SendPage = () => {
   }, [aliasData, to, isDirectAddress]);
 
   const handleClose = () => {
-    navigate("/dashboard");
+    navigate("/app");
   };
 
   const handleNext = () => {
@@ -183,7 +183,7 @@ export const SendPage = () => {
       alert("Transacción enviada exitosamente!");
 
       // Redirect to dashboard
-      navigate("/dashboard");
+      navigate("/app");
     } catch (error) {
       console.error("Error sending transaction:", error);
       // TODO: Add error toast

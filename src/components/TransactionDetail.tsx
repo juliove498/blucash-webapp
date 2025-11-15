@@ -13,26 +13,122 @@ export const TransactionDetail = ({ transaction }: TransactionDetailProps) => {
   const { user } = usePrivy();
   const smartAccount = user?.smartWallet;
 
-  // Determinar si es ingreso o retiro
+  // Detectar si es un swap
+  const isSwap = transaction.type === "swap";
+
+  // Determinar si es ingreso o retiro (solo para transacciones normales)
   const isIncoming =
+    !isSwap &&
     transaction.to?.toLowerCase() === smartAccount?.address?.toLowerCase();
 
   // Dirección a consultar (from si es ingreso, to si es retiro)
   const addressToQuery = isIncoming ? transaction.from : transaction.to;
 
-  // Consultar alias del address
-  const { data: addressData, isLoading } = useGetAddressByAlias(addressToQuery);
+  // Consultar alias del address (no aplica para swap)
+  const { data: addressData, isLoading } = useGetAddressByAlias(
+    isSwap ? undefined : addressToQuery
+  );
 
-  // Encontrar el token
+  // Encontrar el token (para transacciones normales)
   const token = AVAILABLE_TOKENS.find(
     (t) => t.symbol === transaction.tokenSymbol
   );
 
-  // Formatear el monto
-  const formattedAmount = formatBalance({
-    amount: BigInt(transaction.value || 0),
-    tokenDecimals: transaction.tokenDecimal,
-  });
+  // Formatear el monto (para transacciones normales)
+  const formattedAmount = !isSwap
+    ? formatBalance({
+        amount: BigInt(transaction.value || 0),
+        tokenDecimals: transaction.tokenDecimal,
+      })
+    : "";
+
+  // Si es swap, renderizar diseño especial
+  if (isSwap) {
+    return (
+      <div className="px-6 py-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-[#354eab]">
+            <svg
+              className="w-8 h-8 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold text-[#12033A] mb-2">
+            {transaction.tokenIn} ⇄ {transaction.tokenOut}
+          </h3>
+          <p className="text-gray-500 text-sm">
+            {new Date(Number(transaction.timeStamp) * 1000).toLocaleDateString(
+              "es-ES",
+              {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }
+            )}
+          </p>
+        </div>
+
+        {/* Detalles del swap */}
+        <div className="bg-[#E8EBF4] rounded-2xl p-6 mb-6">
+          <div className="space-y-4">
+            {/* Cambiaste */}
+            <div className="flex justify-between items-center">
+              <p className="text-[#12033A] font-semibold text-lg">Cambiaste:</p>
+              <p className="text-[#354eab] font-bold text-lg">
+                {formatBalance({
+                  amount: BigInt(transaction.amountIn || 0),
+                  tokenDecimals: transaction.tokenInDecimals,
+                })}{" "}
+                {transaction.tokenIn}
+              </p>
+            </div>
+
+            {/* Recibiste */}
+            <div className="flex justify-between items-center">
+              <p className="text-[#12033A] font-semibold text-lg">Recibiste:</p>
+              <p className="text-[#3388f3] font-bold text-lg">
+                {formatBalance({
+                  amount: BigInt(transaction.amountOut || 0),
+                  tokenDecimals: transaction.tokenOutDecimals,
+                })}{" "}
+                {transaction.tokenOut}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Hash de transacción */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100 mb-6">
+          <p className="text-gray-500 text-sm mb-2">Hash de transacción</p>
+          <p className="text-[#2C1B52] text-xs font-mono break-all">
+            {transaction.hash}
+          </p>
+        </div>
+
+        {/* Ver en explorador */}
+        <a
+          href={`https://basescan.org/tx/${transaction.hash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-[#3587f5] text-white py-3.5 rounded-xl font-semibold text-center block"
+        >
+          Ver en explorador
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-6">
