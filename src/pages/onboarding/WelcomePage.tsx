@@ -1,8 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { useAliasStore } from "@/stores/useAliasStore";
 
 export const WelcomePage = () => {
   const navigate = useNavigate();
+  const { alias } = useAliasStore();
+
+  // Redirigir a home si ya tiene alias
+  useEffect(() => {
+    if (alias) {
+      navigate("/app", { replace: true });
+    }
+  }, [alias, navigate]);
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">

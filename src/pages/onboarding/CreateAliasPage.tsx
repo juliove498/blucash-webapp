@@ -5,10 +5,12 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useCreateAlias } from "@/hooks/useCreateAlias";
 import { useDebounce } from "use-debounce";
 import { Spinner } from "@/components/ui/Spinner";
+import { useAliasStore } from "@/stores/useAliasStore";
 
 export const CreateAliasPage = () => {
   const navigate = useNavigate();
   const { getAccessToken } = usePrivy();
+  const { alias: existingAlias } = useAliasStore();
   const [alias, setAlias] = useState("");
   const [debouncedAlias] = useDebounce(alias, 500);
   const [isCheckingAlias, setIsCheckingAlias] = useState(false);
@@ -16,6 +18,13 @@ export const CreateAliasPage = () => {
   const [aliasAvailable, setAliasAvailable] = useState(false);
 
   const { mutate: createAlias, isPending } = useCreateAlias();
+
+  // Redirigir a home si ya tiene alias
+  useEffect(() => {
+    if (existingAlias) {
+      navigate("/app", { replace: true });
+    }
+  }, [existingAlias, navigate]);
 
   // Validar formato del alias
   const isValidFormat = (value: string) => {

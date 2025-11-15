@@ -18,14 +18,26 @@ export function useCreateAlias() {
 			return await createAlias({ token, alias });
 		},
 		onSuccess: async (_data, _variables, _context) => {
+			console.log('[useCreateAlias] Success, data:', _data);
+			
+			if (!_data?.alias) {
+				console.error('[useCreateAlias] No alias in response');
+				return;
+			}
+			
 			setAlias(_data.alias);
 			const smartWallet = user?.smartWallet;
 			if (!smartWallet) {
+				console.error('[useCreateAlias] No smart wallet found');
 				return navigate('/session-error', { replace: true });
 			}
 
+			console.log('[useCreateAlias] Navigating to /app');
 			navigate('/app', { replace: true });
 			queryClient.cancelQueries({ queryKey: ['user-alias'] });
+		},
+		onError: (error) => {
+			console.error('[useCreateAlias] Error creating alias:', error);
 		},
 	});
 }
