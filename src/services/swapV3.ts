@@ -50,12 +50,17 @@ export const swapV3 = async ({
 	amountOutMinimum: bigint;
 	sqrtPriceLimitX96: bigint;
 }) => {
-	const amountInWei = parseUnits(amountIn, TOKENS.USDC.decimals);
+	// Determinar decimales según el token de entrada
+	const decimalsIn = tokenIn.toLowerCase() === TOKENS.USDC.address.toLowerCase() 
+		? TOKENS.USDC.decimals 
+		: TOKENS.ARST.decimals;
+	
+	const amountInWei = parseUnits(amountIn, decimalsIn);
 
 	console.log('Aprobando router para gastar tokens...');
 	
 	const approveHash = await walletClient.sendTransaction({
-		to: TOKENS.USDC.address,
+		to: tokenIn,
 		data: encodeFunctionData({
 			abi: erc20Abi,
 			functionName: 'approve',

@@ -260,6 +260,7 @@ export const SwapPage = () => {
             <div className="flex items-center gap-3">
               <input
                 type="text"
+                inputMode="decimal"
                 value={amountIn}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9,]/g, "");
@@ -289,7 +290,7 @@ export const SwapPage = () => {
           <div className="flex justify-center -my-2 relative z-10">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => null}
+              onClick={handleSwapDirection}
               className="w-10 h-10 bg-accent rounded-full flex items-center justify-center text-white shadow-lg"
             >
               <svg

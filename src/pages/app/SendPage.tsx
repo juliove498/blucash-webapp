@@ -448,6 +448,7 @@ export const SendPage = () => {
                   <div className="relative">
                     <input
                       type="text"
+                      inputMode="decimal"
                       value={amount}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9,]/g, "");

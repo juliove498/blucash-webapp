@@ -1,4 +1,4 @@
-# 🔒 Content Security Policy (CSP) Configuration
+# 🔒 Content Security Policy (CSP) Configurations
 
 Esta aplicación implementa una **Content Security Policy (CSP)** estricta siguiendo las recomendaciones de Privy para máxima seguridad.
 

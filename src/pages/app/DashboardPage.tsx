@@ -15,7 +15,10 @@ import { useCompactUI } from "@/hooks/useCompactUI";
 import { useGetAlias } from "@/hooks/useGetAlias";
 import useGetBalance from "@/hooks/useGetBalance";
 import { useGetLastTransaction } from "@/hooks/useGetLastTransaction";
+import { useRedeemArst } from "@/hooks/useRedeemArst";
+import { useRedeemStatus } from "@/hooks/useRedeemStatus";
 import useTokenBalanceStore from "@/stores/useTokenBalanceStore";
+import { useAliasStore } from "@/stores/useAliasStore";
 import { formatBalance, formatLargeNumber } from "@/utils";
 import TokenBalance from "@/components/TokenBalance";
 import { TransactionDetail } from "@/components/TransactionDetail";
@@ -25,9 +28,15 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const bottomSheet = useRef<BottomSheetRef>(null);
   const transactionBottomSheet = useRef<BottomSheetRef>(null);
+  const redeemBottomSheetRef = useRef<BottomSheetRef>(null);
   const smartAccount = user?.smartWallet;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [redeemStatus, setRedeemStatus] = useState<"success" | "error" | null>(
+    null
+  );
+  const { alias = "" } = useAliasStore();
+  const redeemMutation = useRedeemArst();
   const { t } = useTranslation();
 
   // Pull to refresh states
@@ -64,6 +73,9 @@ export const DashboardPage = () => {
 
   const { data: balanceData, isLoading } = useGetBalance();
 
+  // Check redeem status
+  const { data: redeemStatusData } = useRedeemStatus(smartAccount?.address);
+
   const handleOnRefresh = async () => {
     setIsRefreshing(true);
     await getLastTransactions();
@@ -73,6 +85,32 @@ export const DashboardPage = () => {
       });
     });
     setIsRefreshing(false);
+  };
+
+  const handleRedeemArst = async () => {
+    if (!smartAccount?.address || !alias) return;
+
+    try {
+      const result = await redeemMutation.mutateAsync({
+        alias,
+        wallet_address: smartAccount.address,
+        email: user?.email?.address,
+        phone_number: user?.phone?.number,
+      });
+
+      if (result.success) {
+        setRedeemStatus("success");
+        redeemBottomSheetRef.current?.present();
+        // Refrescar el estado del redeem
+        queryClient.invalidateQueries({
+          queryKey: ["redeemStatus", smartAccount.address],
+        });
+      }
+    } catch (error) {
+      setRedeemStatus("error");
+      redeemBottomSheetRef.current?.present();
+      console.error("Error al enviar solicitud de redención:", error);
+    }
   };
 
   // Pull to refresh handlers
@@ -305,7 +343,7 @@ export const DashboardPage = () => {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto pb-24 -mt-4">
+      <div className="flex-1 overflow-y-auto pb-2 -mt-4">
         {/* Banner de Swap */}
         <div className="px-5 mb-6 mt-2">
           <motion.button
@@ -375,180 +413,181 @@ export const DashboardPage = () => {
           </motion.button>
         </div>
 
-        {/* Saldo disponible */}
-        <div className="px-5 mb-7">
-          <h2 className="text-[#12033A] font-bold text-[19px] mb-4">
-            Saldo disponible
-          </h2>
-          <div className="bg-[#E8EBF4] rounded-[28px] px-6 shadow-sm">
-            {AVAILABLE_TOKENS.map((token, index) => (
-              <div
-                key={token.address}
-                className={`flex justify-between items-center py-4 ${
-                  index !== AVAILABLE_TOKENS.length - 1
-                    ? "border-b border-white/50"
-                    : ""
-                }`}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-[40px] h-[40px] rounded-full flex items-center justify-center">
-                    <img
-                      src={token.icon}
-                      alt={token.symbol}
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  </div>
-                  <span className="font-semibold text-[20px] text-[#12033A]">
-                    {token.symbol}
-                  </span>
-                </div>
-                <TokenBalance
-                  account={token.address as Address}
-                  address={smartAccount?.address as Address}
-                  displayDecimals={2}
-                  className="font-bold text-[24px] text-[#12033A]"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Actividad reciente */}
-        <div className="px-5">
-          <h2 className="text-[#2C1B52] font-bold text-[19px] mb-4">
-            {t("screens.dashboard.lastTransactions")}
-          </h2>
-
-          {transactionIsLoading && (
-            <div className="space-y-2.5">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-[85px] rounded-[22px]" />
-              ))}
-            </div>
-          )}
-
-          {data?.length === 0 && !transactionIsLoading && (
-            <div className="flex flex-col items-center justify-center py-12 gap-2">
-              <svg
-                className="w-12 h-12 text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                />
-              </svg>
-              <p className="text-gray-400 text-[15px] font-medium">
-                {t("screens.dashboard.noTransactions")}
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2.5">
-            {data?.map((item: any) => {
-              const isSwap = item.type === "swap";
-              const isIncoming =
-                !isSwap &&
-                item.to?.toLowerCase() === smartAccount?.address?.toLowerCase();
-
-              // Render para transacciones de swap
-              if (isSwap) {
-                return (
-                  <motion.button
-                    key={`${item.blockHash}-swap`}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setSelectedTransaction(item);
-                      transactionBottomSheet.current?.present();
-                    }}
-                    className="w-full bg-white rounded-[22px] p-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3.5 flex-1">
-                        <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0 bg-[#354eab]">
-                          <svg
-                            className="w-6 h-6 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2.5}
-                              d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                            />
-                          </svg>
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className="text-[#12033A] font-bold text-[16px] mb-1 tracking-tight">
-                            {item.tokenIn} → {item.tokenOut}
-                          </p>
-                          <p className="text-[#12033A66] text-[14px] font-medium tracking-tight">
-                            {new Date(
-                              Number(item.timeStamp) * 1000
-                            ).toLocaleString("es-ES", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "America/Argentina/Buenos_Aires",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 mr-2">
-                        <p className="text-[16px] font-medium text-[#354eab] tracking-tight">
-                          <Mask>
-                            -
-                            {formatLargeNumber(
-                              formatBalance({
-                                amount: BigInt(item.amountIn || 0),
-                                tokenDecimals: item.tokenInDecimals,
-                              })
-                            )}{" "}
-                            {item.tokenIn}
-                          </Mask>
-                        </p>
-                        <p className="text-[16px] font-medium text-[#3388f3] tracking-tight">
-                          <Mask>
-                            +
-                            {formatLargeNumber(
-                              formatBalance({
-                                amount: BigInt(item.amountOut || 0),
-                                tokenDecimals: item.tokenOutDecimals,
-                              })
-                            )}{" "}
-                            {item.tokenOut}
-                          </Mask>
-                        </p>
-                      </div>
-                      <svg
-                        className="w-5 h-5 text-[#12033A33]"
-                        fill="none"
+        {/* DevConnect ARG Banner */}
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-[#E8EBF4] to-[#D8DBE8] rounded-3xl p-6 relative overflow-hidden">
+            <div className="relative z-10">
+              {redeemStatusData?.data.status === "completed" ? (
+                // Completed state - Ya recibió los ARST
+                <>
+                  <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                    🎉 Tus ARST ya estan disponibles para usarlos como quieras
+                  </h3>
+                </>
+              ) : redeemStatusData?.data.status === "pending" ? (
+                // Pending state - Ya solicitó pero no recibió
+                <>
+                  <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                    ¡Solicitud enviada!
+                  </h3>
+                  <p className="text-[#12033A] text-base mb-3 leading-relaxed">
+                    Acercate a nuestro stand en Devconnect ARG para recibir tus
+                    ARST
+                  </p>
+                  <div className="flex items-center gap-2 text-[#0F2854] text-sm font-medium">
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
                         stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span>Pendiente de validación en el stand</span>
+                  </div>
+                </>
+              ) : (
+                // Not found state - Nunca solicitó
+                <>
+                  <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                    ¿Estás en Devconnect ARG?
+                  </h3>
+                  <p className="text-[#12033A] text-base mb-4 leading-relaxed">
+                    Reclamá tus ARST y arrimate a nuestro stand que te invitamos
+                    un café y nos conocemos
+                  </p>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleRedeemArst}
+                    disabled={redeemMutation.isPending}
+                    className="bg-[#0F2854] text-white rounded-full px-6 py-3 font-semibold flex items-center gap-3 shadow-lg hover:bg-[#1a3d72] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
                       </svg>
                     </div>
+                    <span>
+                      {redeemMutation.isPending
+                        ? "Enviando..."
+                        : "Quiero mis ARST"}
+                    </span>
                   </motion.button>
-                );
-              }
+                </>
+              )}
+            </div>
+            {/* Decorative icon */}
+            <div className="absolute -right-4 -top-4 w-32 h-32 opacity-10">
+              <img
+                src="/assets/images/arst.webp"
+                alt=""
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
-              // Render para transacciones normales (incoming/outgoing)
+      {/* Saldo disponible */}
+      <div className="px-5 mb-7">
+        <h2 className="text-[#12033A] font-bold text-[19px] mb-4">
+          Saldo disponible
+        </h2>
+        <div className="bg-[#E8EBF4] rounded-[28px] px-6 shadow-sm">
+          {AVAILABLE_TOKENS.map((token, index) => (
+            <div
+              key={token.address}
+              className={`flex justify-between items-center py-4 ${
+                index !== AVAILABLE_TOKENS.length - 1
+                  ? "border-b border-white/50"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-[40px] h-[40px] rounded-full flex items-center justify-center">
+                  <img
+                    src={token.icon}
+                    alt={token.symbol}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <span className="font-semibold text-[20px] text-[#12033A]">
+                  {token.symbol}
+                </span>
+              </div>
+              <TokenBalance
+                account={token.address as Address}
+                address={smartAccount?.address as Address}
+                displayDecimals={2}
+                className="font-bold text-[24px] text-[#12033A]"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Actividad reciente */}
+      <div className="px-5">
+        <h2 className="text-[#2C1B52] font-bold text-[19px] mb-4">
+          {t("screens.dashboard.lastTransactions")}
+        </h2>
+
+        {transactionIsLoading && (
+          <div className="space-y-2.5">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[85px] rounded-[22px]" />
+            ))}
+          </div>
+        )}
+
+        {data?.length === 0 && !transactionIsLoading && (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <svg
+              className="w-12 h-12 text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
+            </svg>
+            <p className="text-gray-400 text-[15px] font-medium">
+              {t("screens.dashboard.noTransactions")}
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          {data?.map((item: any) => {
+            const isSwap = item.type === "swap";
+            const isIncoming =
+              !isSwap &&
+              item.to?.toLowerCase() === smartAccount?.address?.toLowerCase();
+
+            // Render para transacciones de swap
+            if (isSwap) {
               return (
                 <motion.button
-                  key={`${item.blockHash}-${item.to}`}
+                  key={`${item.blockHash}-swap`}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setSelectedTransaction(item);
@@ -558,87 +597,175 @@ export const DashboardPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3.5 flex-1">
-                      <div
-                        className={`w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0 ${
-                          isIncoming ? "bg-[#3587f5]" : "bg-[#354eab]"
-                        }`}
-                      >
+                      <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0 bg-[#354eab]">
                         <svg
                           className="w-6 h-6 text-white"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
-                          {isIncoming ? (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2.5}
-                              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                            />
-                          ) : (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2.5}
-                              d="M5 10l7-7m0 0l7 7m-7-7v18"
-                            />
-                          )}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                          />
                         </svg>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-[#12033A] font-bold text-[16px] mb-1 tracking-tight">
-                          {isIncoming ? "Ingreso" : "Retiro"} {item.tokenSymbol}
+                          {item.tokenIn} → {item.tokenOut}
                         </p>
                         <p className="text-[#12033A66] text-[14px] font-medium tracking-tight">
-                          {new Date(item.timeStamp * 1000).toLocaleString(
-                            "es-ES",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "America/Argentina/Buenos_Aires",
-                            }
-                          )}
+                          {new Date(
+                            Number(item.timeStamp) * 1000
+                          ).toLocaleString("es-ES", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "America/Argentina/Buenos_Aires",
+                          })}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={`text-[16px] font-medium tracking-tight ${
-                          isIncoming ? "text-[#3388f3]" : "text-[#354eab]"
-                        }`}
-                      >
+                    <div className="flex flex-col items-end gap-1 mr-2">
+                      <p className="text-[16px] font-medium text-[#354eab] tracking-tight">
                         <Mask>
-                          {isIncoming ? "+" : "-"}
+                          -
                           {formatLargeNumber(
                             formatBalance({
-                              amount: BigInt(item.value || 0),
-                              tokenDecimals: item.tokenDecimal,
+                              amount: BigInt(item.amountIn || 0),
+                              tokenDecimals: item.tokenInDecimals,
                             })
-                          )}
+                          )}{" "}
+                          {item.tokenIn}
                         </Mask>
                       </p>
+                      <p className="text-[16px] font-medium text-[#3388f3] tracking-tight">
+                        <Mask>
+                          +
+                          {formatLargeNumber(
+                            formatBalance({
+                              amount: BigInt(item.amountOut || 0),
+                              tokenDecimals: item.tokenOutDecimals,
+                            })
+                          )}{" "}
+                          {item.tokenOut}
+                        </Mask>
+                      </p>
+                    </div>
+                    <svg
+                      className="w-5 h-5 text-[#12033A33]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </motion.button>
+              );
+            }
+
+            // Render para transacciones normales (incoming/outgoing)
+            return (
+              <motion.button
+                key={`${item.blockHash}-${item.to}`}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setSelectedTransaction(item);
+                  transactionBottomSheet.current?.present();
+                }}
+                className="w-full bg-white rounded-[22px] p-3 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5 flex-1">
+                    <div
+                      className={`w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0 ${
+                        isIncoming ? "bg-[#3587f5]" : "bg-[#354eab]"
+                      }`}
+                    >
                       <svg
-                        className="w-5 h-5 text-[#12033A33]"
+                        className="w-6 h-6 text-white"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                        {isIncoming ? (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                          />
+                        ) : (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M5 10l7-7m0 0l7 7m-7-7v18"
+                          />
+                        )}
                       </svg>
                     </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-[#12033A] font-bold text-[16px] mb-1 tracking-tight">
+                        {isIncoming ? "Ingreso" : "Retiro"} {item.tokenSymbol}
+                      </p>
+                      <p className="text-[#12033A66] text-[14px] font-medium tracking-tight">
+                        {new Date(item.timeStamp * 1000).toLocaleString(
+                          "es-ES",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "America/Argentina/Buenos_Aires",
+                          }
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </motion.button>
-              );
-            })}
-          </div>
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={`text-[16px] font-medium tracking-tight ${
+                        isIncoming ? "text-[#3388f3]" : "text-[#354eab]"
+                      }`}
+                    >
+                      <Mask>
+                        {isIncoming ? "+" : "-"}
+                        {formatLargeNumber(
+                          formatBalance({
+                            amount: BigInt(item.value || 0),
+                            tokenDecimals: item.tokenDecimal,
+                          })
+                        )}
+                      </Mask>
+                    </p>
+                    <svg
+                      className="w-5 h-5 text-[#12033A33]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -654,6 +781,77 @@ export const DashboardPage = () => {
         {selectedTransaction && (
           <TransactionDetail transaction={selectedTransaction} />
         )}
+      </BottomSheet>
+
+      {/* Redeem Result BottomSheet */}
+      <BottomSheet ref={redeemBottomSheetRef}>
+        <div className="py-6">
+          {redeemStatus === "success" ? (
+            // Success Message
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <svg
+                  className="w-10 h-10 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#12033A] mb-3">
+                ¡Excelente!
+              </h3>
+              <p className="text-gray-600 text-base leading-relaxed mb-6">
+                Acercate al stand y mostrá tu alias para recibir tus ARST
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => redeemBottomSheetRef.current?.dismiss()}
+                className="w-full bg-[#2952E8] text-white rounded-2xl py-4 font-semibold"
+              >
+                Entendido
+              </motion.button>
+            </div>
+          ) : (
+            // Error Message
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <svg
+                  className="w-10 h-10 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#12033A] mb-3">
+                Oops, algo salió mal
+              </h3>
+              <p className="text-gray-600 text-base leading-relaxed mb-6">
+                Recordá que solo podes reclamar una vez tus ARST en Devconnect.
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => redeemBottomSheetRef.current?.dismiss()}
+                className="w-full bg-[#2952E8] text-white rounded-2xl py-4 font-semibold"
+              >
+                Entendido
+              </motion.button>
+            </div>
+          )}
+        </div>
       </BottomSheet>
     </div>
   );
