@@ -16,6 +16,7 @@ import { useCompactUI } from "@/hooks/useCompactUI";
 import { useGetAlias } from "@/hooks/useGetAlias";
 import useGetBalance from "@/hooks/useGetBalance";
 import { useRedeemArst } from "@/hooks/useRedeemArst";
+import { useRedeemStatus } from "@/hooks/useRedeemStatus";
 import { useAliasStore } from "@/stores/useAliasStore";
 import { useSmartWalletKeyStore } from "@/stores/useSmartWalletKey";
 import useTokenBalanceStore from "@/stores/useTokenBalanceStore";
@@ -34,6 +35,7 @@ export const ProfilePage = () => {
   const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false);
   const { data: aliasData } = useGetAlias(smartAccount?.address as Address);
   const redeemMutation = useRedeemArst();
+  const { data: redeemStatusData } = useRedeemStatus(smartAccount?.address);
   const redeemBottomSheetRef = useRef<BottomSheetRef>(null);
   const [redeemStatus, setRedeemStatus] = useState<"success" | "error" | null>(
     null
@@ -53,6 +55,10 @@ export const ProfilePage = () => {
       if (result.success) {
         setRedeemStatus("success");
         redeemBottomSheetRef.current?.present();
+        // Refrescar el estado del redeem
+        queryClient.invalidateQueries({
+          queryKey: ["redeemStatus", smartAccount.address],
+        });
       }
     } catch (error) {
       setRedeemStatus("error");
@@ -389,32 +395,82 @@ export const ProfilePage = () => {
         {/* DevConnect ARG Banner */}
         <div className="mb-6 bg-gradient-to-br from-[#E8EBF4] to-[#D8DBE8] rounded-3xl p-6 relative overflow-hidden">
           <div className="relative z-10">
-            <h3 className="text-[#12033A] text-xl font-bold mb-2">
-              ¿Estás en Devconnect ARG?
-            </h3>
-            <p className="text-[#12033A] text-base mb-4 leading-relaxed">
-              Reclamá tus ARST y arrimate a nuestro stand que te invitamos un
-              café y nos conocemos
-            </p>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={handleRedeemArst}
-              disabled={redeemMutation.isPending}
-              className="bg-[#0F2854] text-white rounded-full px-6 py-3 font-semibold flex items-center gap-3 shadow-lg hover:bg-[#1a3d72] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
+            {redeemStatusData?.data.status === "completed" ? (
+              // Completed state - Ya recibió los ARST
+              <>
+                <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                  ¡Ahora sí! 🎉
+                </h3>
+                <p className="text-[#12033A] text-base leading-relaxed">
+                  Acercate al food truck y reclamá tu sándwich con tus ARST
+                </p>
+              </>
+            ) : redeemStatusData?.data.status === "pending" ? (
+              // Pending state - Ya solicitó pero no recibió
+              <>
+                <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                  ¡Solicitud enviada!
+                </h3>
+                <p className="text-[#12033A] text-base mb-3 leading-relaxed">
+                  Acercate a nuestro stand en Devconnect ARG para recibir tus
+                  ARST
+                </p>
+                <div className="flex items-center gap-2 text-[#0F2854] text-sm font-medium">
+                  <svg
+                    className="w-5 h-5 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span>Pendiente de validación en el stand</span>
+                </div>
+              </>
+            ) : (
+              // Not found state - Nunca solicitó
+              <>
+                <h3 className="text-[#12033A] text-xl font-bold mb-2">
+                  ¿Estás en Devconnect ARG?
+                </h3>
+                <p className="text-[#12033A] text-base mb-4 leading-relaxed">
+                  Reclamá tus ARST y arrimate a nuestro stand que te invitamos
+                  un café y nos conocemos
+                </p>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleRedeemArst}
+                  disabled={redeemMutation.isPending}
+                  className="bg-[#0F2854] text-white rounded-full px-6 py-3 font-semibold flex items-center gap-3 shadow-lg hover:bg-[#1a3d72] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
-                </svg>
-              </div>
-              <span>
-                {redeemMutation.isPending ? "Enviando..." : "Quiero mis ARST"}
-              </span>
-            </motion.button>
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
+                    </svg>
+                  </div>
+                  <span>
+                    {redeemMutation.isPending
+                      ? "Enviando..."
+                      : "Quiero mis ARST"}
+                  </span>
+                </motion.button>
+              </>
+            )}
           </div>
           {/* Decorative icon */}
           <div className="absolute -right-4 -top-4 w-32 h-32 opacity-10">
@@ -425,34 +481,18 @@ export const ProfilePage = () => {
             />
           </div>
         </div>
+      </div>
 
-        {/* Settings */}
-        <div className="space-y-2.5">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => alias && navigate("/profile/edit")}
-            className="w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4"
-          >
-            <div className="flex items-center gap-4">
-              <svg
-                className="w-6 h-6 text-accent"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              <span className="text-[#12033A] font-bold text-base">
-                {t("profile.editProfile")}
-              </span>
-            </div>
+      {/* Settings */}
+      <div className="space-y-2.5">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={() => alias && navigate("/profile/edit")}
+          className="w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4"
+        >
+          <div className="flex items-center gap-4">
             <svg
-              className="w-5 h-5 text-[#12033A66]"
+              className="w-6 h-6 text-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -461,36 +501,36 @@ export const ProfilePage = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 5l7 7-7 7"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate("/profile/security")}
-            className="w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4"
+            <span className="text-[#12033A] font-bold text-base">
+              {t("profile.editProfile")}
+            </span>
+          </div>
+          <svg
+            className="w-5 h-5 text-[#12033A66]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <div className="flex items-center gap-4">
-              <svg
-                className="w-6 h-6 text-accent"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              <span className="text-[#12033A] font-bold text-base">
-                {t("profile.security")}
-              </span>
-            </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={() => navigate("/profile/security")}
+          className="w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4"
+        >
+          <div className="flex items-center gap-4">
             <svg
-              className="w-5 h-5 text-[#12033A66]"
+              className="w-6 h-6 text-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -499,46 +539,40 @@ export const ProfilePage = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 5l7 7-7 7"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
               />
             </svg>
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleOpenTerms}
-            disabled={isLoadingTerms}
-            className={`w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4 ${
-              isLoadingTerms ? "opacity-60" : ""
-            }`}
+            <span className="text-[#12033A] font-bold text-base">
+              {t("profile.security")}
+            </span>
+          </div>
+          <svg
+            className="w-5 h-5 text-[#12033A66]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <div className="flex items-center gap-4">
-              <svg
-                className={`w-6 h-6 ${
-                  isLoadingTerms ? "text-accent/60" : "text-accent"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span
-                className={`font-bold text-base ${
-                  isLoadingTerms ? "text-[#12033A66]" : "text-[#12033A]"
-                }`}
-              >
-                {t("profile.termsAndConditions")}
-              </span>
-            </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={handleOpenTerms}
+          disabled={isLoadingTerms}
+          className={`w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4 ${
+            isLoadingTerms ? "opacity-60" : ""
+          }`}
+        >
+          <div className="flex items-center gap-4">
             <svg
-              className={`w-5 h-5 ${
-                isLoadingTerms ? "text-[#12033A33]" : "text-[#12033A66]"
+              className={`w-6 h-6 ${
+                isLoadingTerms ? "text-accent/60" : "text-accent"
               }`}
               fill="none"
               stroke="currentColor"
@@ -548,46 +582,46 @@ export const ProfilePage = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 5l7 7-7 7"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleOpenPrivacy}
-            disabled={isLoadingPrivacy}
-            className={`w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4 ${
-              isLoadingPrivacy ? "opacity-60" : ""
+            <span
+              className={`font-bold text-base ${
+                isLoadingTerms ? "text-[#12033A66]" : "text-[#12033A]"
+              }`}
+            >
+              {t("profile.termsAndConditions")}
+            </span>
+          </div>
+          <svg
+            className={`w-5 h-5 ${
+              isLoadingTerms ? "text-[#12033A33]" : "text-[#12033A66]"
             }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <div className="flex items-center gap-4">
-              <svg
-                className={`w-6 h-6 ${
-                  isLoadingPrivacy ? "text-accent/60" : "text-accent"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              <span
-                className={`font-bold text-base ${
-                  isLoadingPrivacy ? "text-[#12033A66]" : "text-[#12033A]"
-                }`}
-              >
-                {t("profile.privacyPolicy")}
-              </span>
-            </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={handleOpenPrivacy}
+          disabled={isLoadingPrivacy}
+          className={`w-full flex items-center justify-between bg-white border-b border-[#12033A1A] p-4 ${
+            isLoadingPrivacy ? "opacity-60" : ""
+          }`}
+        >
+          <div className="flex items-center gap-4">
             <svg
-              className={`w-5 h-5 ${
-                isLoadingPrivacy ? "text-[#12033A33]" : "text-[#12033A66]"
+              className={`w-6 h-6 ${
+                isLoadingPrivacy ? "text-accent/60" : "text-accent"
               }`}
               fill="none"
               stroke="currentColor"
@@ -597,35 +631,57 @@ export const ProfilePage = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 5l7 7-7 7"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
               />
             </svg>
-          </motion.button>
-        </div>
-
-        {/* Logout */}
-        <div className="px-5 mt-8 mb-8">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2.5 bg-[#12033A] text-white rounded-[20px] h-[58px] font-bold text-base"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <span
+              className={`font-bold text-base ${
+                isLoadingPrivacy ? "text-[#12033A66]" : "text-[#12033A]"
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            {t("profile.logout")}
-          </motion.button>
-        </div>
+              {t("profile.privacyPolicy")}
+            </span>
+          </div>
+          <svg
+            className={`w-5 h-5 ${
+              isLoadingPrivacy ? "text-[#12033A33]" : "text-[#12033A66]"
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </motion.button>
+      </div>
+
+      {/* Logout */}
+      <div className="px-5 mt-8 mb-8">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2.5 bg-[#12033A] text-white rounded-[20px] h-[58px] font-bold text-base"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+          {t("profile.logout")}
+        </motion.button>
       </div>
 
       {/* Redeem Result BottomSheet */}

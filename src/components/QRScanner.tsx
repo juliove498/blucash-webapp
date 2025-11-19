@@ -193,8 +193,8 @@ export const QRScanner = ({
           </p>
         )}
         <p className="text-white/60 text-center text-xs mt-3">
-          💡 Si el código tiene un logo en el centro, asegúrate de que esté
-          bien iluminado y enfocado
+          💡 Si el código tiene un logo en el centro, asegúrate de que esté bien
+          iluminado y enfocado
         </p>
       </div>
     </div>
