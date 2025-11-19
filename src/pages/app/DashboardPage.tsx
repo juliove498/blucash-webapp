@@ -421,12 +421,8 @@ export const DashboardPage = () => {
                 // Completed state - Ya recibió los ARST
                 <>
                   <h3 className="text-[#12033A] text-xl font-bold mb-2">
-                    ¡Ahora sí! Ya tenés tus ARST 🎉
+                    🎉 Tus ARST ya estan disponibles para usarlos como quieras
                   </h3>
-                  <p className="text-[#12033A] text-base leading-relaxed">
-                    Ya te arrimaste al food truck y reclamaste tu sándwich con
-                    tus ARST?
-                  </p>
                 </>
               ) : redeemStatusData?.data.status === "pending" ? (
                 // Pending state - Ya solicitó pero no recibió
