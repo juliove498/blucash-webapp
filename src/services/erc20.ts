@@ -3,9 +3,12 @@ import { TOKENS } from '@/constants/tokens';
 import { getChainFromConfig } from '@/utils/chainResolver';
 import { createPublicClientWithFallback } from '@/utils/rpcFallback';
 
+
 const chain = getChainFromConfig();
 
+
 const publicClient = createPublicClientWithFallback(chain);
+
 
 export async function getTokenInfoWithBalance(
 	userAddress: `0x${string}`,

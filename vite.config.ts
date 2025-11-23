@@ -74,6 +74,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path
+      },
+      '/rpc/infura': {
+        target: 'https://base-mainnet.infura.io/v3/18c0406d499541f4a74d009e04c54f99',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/rpc\/infura/, '')
       }
     }
   },
