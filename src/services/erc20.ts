@@ -2,10 +2,13 @@ import { type Address, encodeFunctionData, erc20Abi, parseUnits } from 'viem';
 import { TOKENS } from '@/constants/tokens';
 import { getChainFromConfig } from '@/utils/chainResolver';
 import { createPublicClientWithFallback } from '@/utils/rpcFallback';
+import { convertOffsetToTimes } from 'framer-motion';
 
 const chain = getChainFromConfig();
 
+
 const publicClient = createPublicClientWithFallback(chain);
+
 
 export async function getTokenInfoWithBalance(
 	userAddress: `0x${string}`,
@@ -34,6 +37,16 @@ export async function getTokenInfoWithBalance(
 			functionName: 'name',
 		}),
 	]);
+
+	console.log('getTokenInfoWithBalance called with');
+	console.log('Public client created:', publicClient);
+	console.log('Using chain:', chain);
+	console.log(`Token info for user ${userAddress} and token ${tokenAddress}:`, {
+		symbol,
+		decimals,
+		balance: balance.toString(),
+		name,
+	});
 
 	return {
 		symbol,
