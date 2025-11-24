@@ -2,6 +2,9 @@ import { type Chain, createPublicClient, http } from 'viem';
 
 const RPC_ENDPOINTS = {
 	base: [
+		import.meta.env.DEV
+			? '/rpc/base'
+			: 'https://base-mainnet.g.alchemy.com/v2/tizaV0-Rx40MZX5FVJs68YUXeGB8Fu7y',
 		'https://mainnet.base.org',
 		'https://base.llamarpc.com',
 		'https://base-mainnet.public.blastapi.io',
