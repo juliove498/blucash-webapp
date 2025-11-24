@@ -2,6 +2,7 @@ import { type Chain, createPublicClient, http } from 'viem';
 
 const RPC_ENDPOINTS = {
 	base: [
+		'https://base-mainnet.rpc.privy.systems/?privyAppId=cmgtocdxh0063la0drq1uryr5',
 		import.meta.env.DEV
 			? '/rpc/base'
 			: 'https://base-mainnet.g.alchemy.com/v2/tizaV0-Rx40MZX5FVJs68YUXeGB8Fu7y',
