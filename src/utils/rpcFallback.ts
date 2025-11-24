@@ -2,9 +2,7 @@ import { type Chain, createPublicClient, http } from 'viem';
 
 const RPC_ENDPOINTS = {
 	base: [
-		import.meta.env.DEV
-			? '/rpc/infura'
-			: 'https://base-mainnet.infura.io/v3/18c0406d499541f4a74d009e04c54f99',
+		'/rpc/infura',
 		'https://mainnet.base.org',
 		'https://base.llamarpc.com',
 		'https://base-mainnet.public.blastapi.io',
